@@ -54,12 +54,6 @@ func (self *AdminController) Add(update tgbotapi.Update) {
 		msg := bot.NewMessage(update.Message.Chat.ID, "Informe o nome para esse usuário.")
 		self.bot.Send(msg)
 	} else {
-		if goutils.IsNilOrWhiteSpace(&update.Message.Text) {
-			msg := bot.NewMessage(update.Message.Chat.ID, "Nenhum nome informado.")
-			self.bot.Send(msg)
-			return
-		}
-
 		user.Name = update.Message.Text
 		database.DB.Create(&user)
 		authmiddleware.Auth.RefreshUsers()
