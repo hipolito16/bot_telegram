@@ -20,14 +20,14 @@ func (self *UserController) StartResponse(update tgbotapi.Update) {
 }
 
 func (self *UserController) Question(update tgbotapi.Update) {
-	response, err := gemini.Question(update.Message.Text)
+	messages, err := gemini.Question(update.Message.Text)
 	if err != nil {
 		msg := bot.NewMessage(update.Message.Chat.ID, "Erro ao gerar resposta.")
 		self.bot.Send(msg)
 		return
 	}
 
-	for _, part := range response {
+	for _, part := range messages {
 		msg := bot.NewMessage(update.Message.Chat.ID, part)
 		self.bot.Send(msg)
 	}

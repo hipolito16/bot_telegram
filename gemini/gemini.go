@@ -6,6 +6,8 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 	"os"
+	"strings"
+	"unicode/utf8"
 )
 
 var apiKey string
@@ -37,21 +39,56 @@ func Question(question string) ([]string, error) {
 		}
 	}
 
-	return resizeMessage(text), nil
+	messages := resizeMessage(text)
+
+	for i := range messages {
+		reformatMessage(&messages[i])
+	}
+
+	return messages, nil
 }
 
-func resizeMessage(text string) []string {
-	const maxMessageLength = 4096
+func resizeMessage(message string) []string {
+	const limiteBytes = 4096
 
-	if len(text) <= maxMessageLength {
-		return []string{text}
+	if len(message) <= limiteBytes {
+		return []string{message}
 	}
 
-	var messages []string
-	for i := 0; i < len(text); i += maxMessageLength {
-		end := min(i+maxMessageLength, len(text))
-		messages = append(messages, text[i:end])
+	var result []string
+	var start, current int
+
+	for i := range message {
+		current += utf8.RuneLen(rune(message[i]))
+		if current > limiteBytes {
+			result = append(result, message[start:i])
+			start = i
+			current = utf8.RuneLen(rune(message[i]))
+		}
 	}
 
-	return messages
+	if start < len(message) {
+		result = append(result, message[start:])
+	}
+
+	return result
+}
+
+func reformatMessage(message *string) {
+	var builder strings.Builder
+	runes := []rune(*message)
+	length := len(runes)
+
+	for i := 0; i < length; i++ {
+		if runes[i] == '*' {
+			before := i > 0 && runes[i-1] == '.'
+			after := i < length-1 && runes[i+1] == '.'
+			if !before && !after {
+				continue
+			}
+		}
+		builder.WriteRune(runes[i])
+	}
+
+	*message = builder.String()
 }
