@@ -25,7 +25,7 @@ func (self *AdminController) List(update tgbotapi.Update) {
 
 	msg := bot.NewMessage(update.Message.Chat.ID, "Usuários cadastrados:")
 	for _, user := range users {
-		msg.Text += fmt.Sprintf("\nID: `%v` - Nome: `%v`", user.IdTelegram, user.Name)
+		msg.Text += fmt.Sprintf("\nID: `%v` | Nome: `%v`", user.IdTelegram, user.Name)
 	}
 	self.bot.Send(msg)
 }
