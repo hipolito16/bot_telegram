@@ -1,18 +1,30 @@
 package main
 
 import (
+	_ "embed"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/hipolito16/bot_telegram/bot"
 	"github.com/hipolito16/bot_telegram/controllers"
-	"github.com/hipolito16/bot_telegram/controllers/bot"
 	"github.com/hipolito16/bot_telegram/database"
 	"github.com/hipolito16/bot_telegram/gemini"
 	"github.com/hipolito16/bot_telegram/middlewares"
 	"github.com/joho/godotenv"
+	"os"
 )
 
+//go:embed .env
+var envFile []byte
+
 func init() {
-	if err := godotenv.Load(".env"); err != nil {
+	envMap, err := godotenv.UnmarshalBytes(envFile)
+	if err != nil {
 		panic(err)
+	}
+
+	for key, value := range envMap {
+		if err = os.Setenv(key, value); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -31,22 +43,7 @@ func main() {
 
 	for update := range updates {
 		if update.Message != nil {
-			switch update.Message.Command() {
-			case "add":
-				if middlewares.Auth.IsAdmin(update) {
-					controllers.Admin.Add(update)
-				}
-			case "remove":
-				if middlewares.Auth.IsAdmin(update) {
-					controllers.Admin.Remove(update)
-				}
-			case "id":
-				controllers.User.Id(update)
-			default:
-				if middlewares.Auth.VerifyUser(update) {
-					controllers.User.Question(update)
-				}
-			}
+			controllers.Route(update.Message.Command(), update)
 		}
 	}
 }

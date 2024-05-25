@@ -10,12 +10,23 @@ import (
 )
 
 var (
-	DB  *gorm.DB
-	err error
+	DB       *gorm.DB
+	err      error
+	host     string
+	port     string
+	user     string
+	password string
+	dbname   string
 )
 
 func Start() {
-	stringDeConexao := fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
+	host = os.Getenv("DB_HOST")
+	port = os.Getenv("DB_PORT")
+	user = os.Getenv("DB_USER")
+	password = os.Getenv("DB_PASSWORD")
+	dbname = os.Getenv("DB_NAME")
+
+	stringDeConexao := fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=disable", host, port, user, password, dbname)
 
 	if DB, err = gorm.Open(postgres.Open(stringDeConexao), &gorm.Config{}); err != nil {
 		panic(err)
@@ -29,7 +40,8 @@ func Start() {
 	adminIdTelegram, _ := strconv.ParseInt(os.Getenv("ADMIN_ID_TELEGRAM"), 10, 64)
 	tx := DB.First(&users, "id_telegram = ?", adminIdTelegram)
 	if tx.RowsAffected == 0 {
-		user := entities.UserEntity{IdTelegram: adminIdTelegram, Admin: true}
+		adminName := os.Getenv("ADMIN_NAME")
+		user := entities.UserEntity{IdTelegram: adminIdTelegram, Admin: true, Name: adminName}
 		DB.Create(&user)
 	}
 }
