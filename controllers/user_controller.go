@@ -4,6 +4,8 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/hipolito16/bot_telegram/bot"
+	"github.com/hipolito16/bot_telegram/database"
+	"github.com/hipolito16/bot_telegram/entities"
 	"github.com/hipolito16/bot_telegram/gemini"
 	"os"
 )
@@ -19,21 +21,26 @@ func (self *UserController) StartResponse(update tgbotapi.Update) {
 	self.bot.Send(msg)
 }
 
-func (self *UserController) Question(update tgbotapi.Update) {
-	messages, err := gemini.Question(update.Message.Text)
+func (self *UserController) Id(update tgbotapi.Update) {
+	msg := bot.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Seu ID é: `%v`", update.Message.From.ID))
+	self.bot.Send(msg)
+}
+
+func (self *UserController) LimparChat(update tgbotapi.Update) {
+	database.DB.Delete(&entities.GeminiChatHistoryEntity{}, "id_telegram = ?", update.Message.From.ID)
+	msg := bot.NewMessage(update.Message.Chat.ID, "Chat com o Gemini reiniciado.")
+	self.bot.Send(msg)
+}
+
+func (self *UserController) Chat(update tgbotapi.Update) {
+	messages, err := gemini.Chat(update)
 	if err != nil {
 		msg := bot.NewMessage(update.Message.Chat.ID, "Erro ao gerar resposta.")
 		self.bot.Send(msg)
 		return
 	}
-
 	for _, part := range messages {
 		msg := bot.NewMessage(update.Message.Chat.ID, part)
 		self.bot.Send(msg)
 	}
-}
-
-func (self *UserController) Id(update tgbotapi.Update) {
-	msg := bot.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Seu ID é: `%v`", update.Message.From.ID))
-	self.bot.Send(msg)
 }

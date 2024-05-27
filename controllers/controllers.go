@@ -3,26 +3,22 @@ package controllers
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/hipolito16/bot_telegram/middlewares"
-	"github.com/hipolito16/bot_telegram/structs"
 )
 
 var (
-	History *HistoryCommandController
-	Admin   *AdminController
-	User    *UserController
+	Admin *AdminController
+	User  *UserController
 )
 
-func StartControllers(bot *tgbotapi.BotAPI) {
-	History = &HistoryCommandController{historiesCommand: &map[int64]structs.HistoryCommand{}}
+func NewControllers(bot *tgbotapi.BotAPI) {
 	Admin = &AdminController{bot: bot}
 	User = &UserController{bot: bot}
 }
 
 func Route(command string, update tgbotapi.Update) {
-	if historyCommand, ok, _ := History.HasCommandHistory(update); ok {
+	if historyCommand, ok, _ := middlewares.History.HasCommandHistory(update); ok {
 		command = historyCommand
 	}
-
 	switch command {
 	case "start":
 		User.StartResponse(update)
@@ -40,9 +36,13 @@ func Route(command string, update tgbotapi.Update) {
 		}
 	case "id":
 		User.Id(update)
+	case "limparchat":
+		if middlewares.Auth.VerifyUser(update) {
+			User.LimparChat(update)
+		}
 	default:
 		if middlewares.Auth.VerifyUser(update) {
-			User.Question(update)
+			User.Chat(update)
 		}
 	}
 }

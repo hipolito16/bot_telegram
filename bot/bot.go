@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func StartBot() *tgbotapi.BotAPI {
+func New() *tgbotapi.BotAPI {
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_API_TOKEN"))
 	if err != nil {
 		panic(err)
@@ -23,11 +23,12 @@ func NewMessage(chatID int64, text string) tgbotapi.MessageConfig {
 
 func setCommands(bot *tgbotapi.BotAPI) {
 	commands := tgbotapi.NewSetMyCommands([]tgbotapi.BotCommand{
-		{Command: "start", Description: "Olá! Eu sou um bot integrado com a API do Gemini. Como posso te ajudar?"},
+		{Command: "start", Description: "Dicas iniciais."},
 		{Command: "list", Description: "Lista todos usuários."},
 		{Command: "add", Description: "Adiciona um usuário."},
 		{Command: "remove", Description: "Remove um usuário."},
 		{Command: "id", Description: "Retorna seu ID no Telegram."},
+		{Command: "limparchat", Description: "Reinicia o chat com o Gemini."},
 	}...)
 
 	if _, err := bot.Request(commands); err != nil {

@@ -3,7 +3,10 @@ package gemini
 import (
 	"context"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
+	"github.com/hipolito16/bot_telegram/database"
+	"github.com/hipolito16/bot_telegram/entities"
 	"google.golang.org/api/option"
 	"os"
 	"strings"
@@ -12,52 +15,48 @@ import (
 
 var apiKey string
 
-func Start() {
+func New() {
 	apiKey = os.Getenv("GEMINI_API_KEY")
 }
 
-func Question(question string) ([]string, error) {
+func Chat(update tgbotapi.Update) ([]string, error) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, err
 	}
-
 	defer client.Close()
-
-	model := client.GenerativeModel("gemini-pro")
-
-	response, err := model.GenerateContent(ctx, genai.Text(question))
+	model := client.GenerativeModel("gemini-1.5-pro")
+	cs := model.StartChat()
+	var geminiChatHistory entities.GeminiChatHistoryEntity
+	database.DB.FirstOrCreate(&geminiChatHistory, entities.GeminiChatHistoryEntity{IdTelegram: update.Message.From.ID})
+	cs.History = geminiChatHistory.ToGenaiContent()
+	response, err := cs.SendMessage(ctx, genai.Text(update.Message.Text))
 	if err != nil {
 		return nil, err
 	}
-
-	var text string
+	geminiChatHistory.FromGenaiContent(cs.History)
+	database.DB.Save(&geminiChatHistory)
+	var textBuilder strings.Builder
 	for _, candidate := range response.Candidates {
 		for _, part := range candidate.Content.Parts {
-			text += fmt.Sprintf("%v", part)
+			textBuilder.WriteString(fmt.Sprintf("%v", part))
 		}
 	}
-
-	messages := resizeMessage(text)
-
+	messages := resizeMessage(textBuilder.String())
 	for i := range messages {
 		reformatMessage(&messages[i])
 	}
-
 	return messages, nil
 }
 
 func resizeMessage(message string) []string {
 	const limiteBytes = 4096
-
 	if len(message) <= limiteBytes {
 		return []string{message}
 	}
-
 	var result []string
 	var start, current int
-
 	for i := range message {
 		current += utf8.RuneLen(rune(message[i]))
 		if current > limiteBytes {
@@ -66,29 +65,12 @@ func resizeMessage(message string) []string {
 			current = utf8.RuneLen(rune(message[i]))
 		}
 	}
-
 	if start < len(message) {
 		result = append(result, message[start:])
 	}
-
 	return result
 }
 
 func reformatMessage(message *string) {
-	var builder strings.Builder
-	runes := []rune(*message)
-	length := len(runes)
-
-	for i := 0; i < length; i++ {
-		if runes[i] == '*' {
-			before := i > 0 && runes[i-1] == '.'
-			after := i < length-1 && runes[i+1] == '.'
-			if !before && !after {
-				continue
-			}
-		}
-		builder.WriteRune(runes[i])
-	}
-
-	*message = builder.String()
+	*message = strings.ReplaceAll(*message, "*", "")
 }

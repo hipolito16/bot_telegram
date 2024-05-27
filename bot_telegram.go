@@ -20,7 +20,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
 	for key, value := range envMap {
 		if err = os.Setenv(key, value); err != nil {
 			panic(err)
@@ -29,18 +28,15 @@ func init() {
 }
 
 func main() {
-	gemini.Start()
-	database.Start()
-	bot := bot.StartBot()
-	middlewares.StartMiddlewares(bot)
-	controllers.StartControllers(bot)
-
+	gemini.New()
+	database.New()
+	bot := bot.New()
+	middlewares.NewMiddlewares(bot)
+	controllers.NewControllers(bot)
 	bot.Debug = true
-
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.GetUpdatesChan(u)
-
 	for update := range updates {
 		if update.Message != nil {
 			controllers.Route(update.Message.Command(), update)
